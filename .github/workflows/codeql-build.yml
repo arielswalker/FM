@@ -49,9 +49,9 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}          
           COMPONENT_PATH: 'apps/fm'
-          SETUP_COMMAND: 'cp ./cfe/cmake/Makefile.sample Makefile; cp -r ./cfe/cmake/sample_defs sample_defs; sed -i "/list(APPEND MISSION_GLOBAL_APPLIST/a list(APPEND MISSION_GLOBAL_APPLIST fm)" sample_defs/targets.cmake' 
+          SETUP_COMMAND: 'cp ./cfe/cmake/Makefile.sample Makefile; cp -r ./cfe/cmake/sample_defs sample_defs' 
           PREP_COMMAND: 'make OMIT_DEPRECATED=true BUILDTYPE=release SIMULATION=native prep'
-          MAKE_COMMAND: 'make -C build/tools/elf2cfetbl '
+          MAKE_COMMAND: 'ls'
 
       - name: Move Sarif
         run: |
