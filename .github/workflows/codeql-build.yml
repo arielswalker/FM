@@ -1,18 +1,82 @@
-name: CodeQl Analysis
+name: "CodeQL Analysis Script"
 
 on:
   push:
   pull_request:
 
-
 jobs:
+  #Checks for duplicate actions. Skips push actions if there is a matching or duplicate pull-request action.
+  check-for-duplicates:
+    runs-on: ${{ github.repository_owner == 'cFS' && 'linux' || 'ubuntu-latest' }}
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          concurrent_skipping: 'same_content'
+          skip_after_successful_duplicate: 'true'
+          do_not_skip: '["pull_request", "workflow_dispatch", "schedule"]'
+          
   codeql:
-    name: Codeql Analysis
-    uses: nasa/cFS/.github/workflows/codeql-reusable.yml@main
-    with:
-      component-path: apps/fm
-      prep: 'make prep; make -C build/tools/elf2cfetbl'
-      make: 'make -C build/native/default_cpu1/apps/fm'
-      setup: |
-        cp ./cfe/cmake/Makefile.sample Makefile && cp -r ./cfe/cmake/sample_defs sample_defs
-        sed -i "/list(APPEND MISSION_GLOBAL_APPLIST/a list(APPEND MISSION_GLOBAL_APPLIST fm)" sample_defs/targets.cmake
+    name: Run CodeQL
+    runs-on: ${{ github.repository_owner == 'cFS' && 'linux' || 'ubuntu-latest' }}
+    needs: check-for-duplicates
+    strategy:
+      matrix:
+        target: ['coding-standard', 'security']
+      fail-fast: false
+    steps:
+    
+      - name: Checkout bundle
+        uses: actions/checkout@v3
+        with:
+          repository: arielswalker/cFS
+          submodules: true
+
+      - name: Checkout ${{ github.repository }}
+        uses: actions/checkout@v4
+        with:
+           submodules: recursive
+           path: apps/fm
+          
+      - name: Make the Script Executable
+        run: chmod +x ./.github/scripts/codeql.sh
+        
+      - name: Run CodeQL Analysis Script
+        run: ./.github/scripts/codeql.sh 
+        env:
+          TARGET: ${{ matrix.target }}          
+          COMPONENT_PATH: 'apps/fm'
+          SETUP_COMMAND: 'cp ./cfe/cmake/Makefile.sample Makefile; cp -r ./cfe/cmake/sample_defs sample_defs; sed -i "/list(APPEND MISSION_GLOBAL_APPLIST/a list(APPEND MISSION_GLOBAL_APPLIST fm)" sample_defs/targets.cmake' 
+          PREP_COMMAND: 'make OMIT_DEPRECATED=true BUILDTYPE=release SIMULATION=native prep'
+          MAKE_COMMAND: 'make -C build/tools/elf2cfetbl '
+
+      - name: Move Sarif
+        run: |
+          mv apps/cf/Codeql-${{ matrix.target }}.sarif .
+          
+      - name: Filter Sarif
+        uses: advanced-security/filter-sarif@v1
+        with:
+            patterns: |
+                -**/*.md
+                -**/*.txt
+                -**/*.dox
+            input: Codeql-${{ matrix.target }}.sarif
+            output: Codeql-${{ matrix.target }}.sarif
+            
+      - name: Archive Sarif
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeQL-Sarif-${{ matrix.target }}
+          path: Codeql-${{ matrix.target }}.sarif
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: Codeql-${{ matrix.target }}.sarif
+          token: ${{ secrets.GITHUB_TOKEN }}          
+          checkout_path: apps/fm
+          
