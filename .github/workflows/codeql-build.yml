@@ -35,12 +35,6 @@ jobs:
           repository: arielswalker/cFS
           submodules: true
 
-      - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v4
-        with:
-           submodules: recursive
-           path: apps/fm
-          
       - name: Make the Script Executable
         run: chmod +x ./.github/scripts/codeql.sh
         
