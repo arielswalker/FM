@@ -55,7 +55,7 @@ jobs:
 
       - name: Move Sarif
         run: |
-          mv apps/cf/Codeql-${{ matrix.target }}.sarif .
+          mv apps/fm/Codeql-${{ matrix.target }}.sarif .
           
       - name: Filter Sarif
         uses: advanced-security/filter-sarif@v1
