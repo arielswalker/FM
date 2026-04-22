@@ -1,0 +1,20 @@
+name: Internal MCDC Analysis
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+  workflow_dispatch:
+
+jobs:
+  mcdc:
+    name: Run MCDC Analysis
+    uses: arielswalker/cFS/.github/workflows/mcdc-reusable.yml@test-cfs/workflows122
+    with:
+      app-name: 'cs'
